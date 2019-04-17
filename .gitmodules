@@ -1,0 +1,3 @@
+[submodule "third-party/EAST"]
+	path = third-party/EAST
+	url = https://github.com/jerinphilip/EAST/
