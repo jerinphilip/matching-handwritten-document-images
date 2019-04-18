@@ -7,6 +7,7 @@ Attempt at reconfiguring in python of [Matching Handwritten Document Images](htt
 - [x] Feature-Extraction on the Fly: Adapt HWNet Inference.
 - [x] Hungarian Matching: [munkres](https://github.com/bmc/munkres).
 - [x] Visualization
+- [ ] Making Robust to Noise
 - [ ] Scaling to many images.
 
 ## Sample Output
