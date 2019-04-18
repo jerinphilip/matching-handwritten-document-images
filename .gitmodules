@@ -1,3 +1,6 @@
 [submodule "third-party/EAST"]
 	path = third-party/EAST
 	url = https://github.com/jerinphilip/EAST/
+[submodule "third-party/hwnet"]
+	path = third-party/hwnet
+	url = https://github.com/jerinphilip/e2eEmbed
