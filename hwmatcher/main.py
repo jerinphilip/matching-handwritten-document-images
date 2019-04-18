@@ -18,6 +18,64 @@ from utils import HWNetInferenceEngine
 import torch
 from torch.nn.modules.distance import CosineSimilarity
 from munkres import Munkres
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
+from matplotlib import patches
+
+def plot(a, b, indices):
+    """ Plots connections with matplotlib """
+
+    ha, wa, ca = a.image.shape
+    hb, wb, cb = b.image.shape
+
+    assert(ca == cb)
+
+    buffer_width = 20
+    W = wa + buffer_width + wb
+    H = max(ha, hb)
+
+    offset_x, offset_y = wa + buffer_width, 0
+
+    C = np.full((H, W, ca), 255, dtype=a.image.dtype)
+    C[:ha, :wa] = a.image.copy()
+    C[offset_y:offset_y+hb, offset_x:offset_x+wb] = b.image.copy()
+    plt.figure(figsize=(21, 15), dpi=300)
+    plt.imshow(C)
+    axes = plt.gca()
+
+    def draw(bboxes, offset_x, offset_y, color):
+        for bbox in bboxes:
+            x, y, X, Y = (
+                    bbox.x + offset_x,
+                    bbox.y + offset_y,
+                    bbox.X + offset_x,
+                    bbox.Y + offset_y
+            )
+            rect = patches.Rectangle(
+                (x, y), 
+                (X-x+1), (Y-y+1),
+                linewidth=1,
+                edgecolor=color,
+                facecolor='none'
+            )
+            axes.add_patch(rect)
+
+    draw(a.bboxes, 0, 0, color='r')
+    draw(b.bboxes, offset_x, offset_y, color='g')
+
+    def draw_arrows(ba, bb):
+        dx = offset_x + bb.x - ba.X
+        dy = offset_y + bb.y - ba.Y
+        plt.arrow(ba.X, ba.Y, dx, dy, alpha=0.3)
+
+    for index in indices:
+        f, s = index
+        draw_arrows(a.bboxes[f], b.bboxes[s])
+
+    plt.savefig('data/matching.png')
+
+
 
 
 
@@ -43,15 +101,15 @@ class Comparator:
         matrix = matrix.tolist()
         m = Munkres()
         indexes = m.compute(matrix)
-        total = 0
-        for row, column in indexes:
-            value = matrix[row][column]
-            total += value
-            print(row, column, '->', value)
-            # print(f'({row}, {column}) -> {value}')
-        # print(f'total cost: {total}')
-        print('total cost', total)
-
+        # total = 0
+        # for row, column in indexes:
+        #     value = matrix[row][column]
+        #     total += value
+        #     print(row, column, '->', value)
+        #     # print(f'({row}, {column}) -> {value}')
+        # # print(f'total cost: {total}')
+        # print('total cost', total)
+        plot(a, b, indexes)
             
 
     def compute_cost_matrix(self, A, B):
