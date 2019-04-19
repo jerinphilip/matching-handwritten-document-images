@@ -6,6 +6,7 @@ from collections import namedtuple
 from recordtype import recordtype
 import munkres
 import numpy as np
+import random
 
 def add_paths():
     THIRD_PARTY_ROOT = 'third-party'
@@ -69,6 +70,7 @@ def plot(a, b, indices):
         dy = offset_y + bb.y - ba.Y
         plt.arrow(ba.X, ba.Y, dx, dy, alpha=0.3)
 
+    # indices = random.sample(indices, 25)
     for index in indices:
         f, s = index
         draw_arrows(a.bboxes[f], b.bboxes[s])
@@ -126,10 +128,6 @@ class Comparator:
                 value = similarity(vA, vB)
                 _matrix[i, j] = value.item()
         return _matrix
-
-
-
-
 
 
 if __name__ == '__main__':
