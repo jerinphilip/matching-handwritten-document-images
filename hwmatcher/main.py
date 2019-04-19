@@ -18,7 +18,7 @@ from east import EASTWrapper
 from utils import HWNetInferenceEngine
 import torch
 from torch.nn.modules.distance import CosineSimilarity
-from munkres import Munkres
+from munkres import Munkres, make_cost_matrix
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
@@ -65,15 +65,33 @@ def plot(a, b, indices):
     draw(a.bboxes, 0, 0, color='r')
     draw(b.bboxes, offset_x, offset_y, color='g')
 
-    def draw_arrows(ba, bb):
-        dx = offset_x + bb.x - ba.X
-        dy = offset_y + bb.y - ba.Y
-        plt.arrow(ba.X, ba.Y, dx, dy, alpha=0.3)
+    # def draw_arrows(ba, bb):
+    #     dx = offset_x + bb.x - ba.X
+    #     dy = offset_y + bb.y - ba.Y
+    #     plt.arrow(ba.X, ba.Y, dx, dy, alpha=0.3)
+
+    def draw_text_labels(index, ba, bb):
+
+        def collect(**kwargs):
+            return kwargs
+
+
+        kw = collect(
+            ha="center", va="center",
+            bbox=dict(boxstyle="round",
+            ec=(1., 0.5, 0.5),
+            fc=(1., 0.8, 0.8),)
+        )
+                          
+        plt.text(ba.X, ba.y, index[0], fontsize=8, **kw)
+        plt.text(offset_x + bb.x, offset_y + bb.y, index[0], fontsize=8, **kw)
 
     # indices = random.sample(indices, 25)
     for index in indices:
         f, s = index
-        draw_arrows(a.bboxes[f], b.bboxes[s])
+        # s, f = index
+        # draw_arrows(a.bboxes[f], b.bboxes[s])
+        draw_text_labels(index, a.bboxes[f], b.bboxes[s])
 
     plt.savefig('data/matching.png')
 
@@ -90,6 +108,8 @@ class Comparator:
         Sample = recordtype('Sample', 'image bboxes features')
         def sample(image):
             _image, unit_bboxes = self.eastw.predict(image)
+            H, W, *_ = image.shape
+            unit_bboxes = sorted(unit_bboxes, key=lambda b: b.y * W + b.x) 
             return Sample(image=image, bboxes=unit_bboxes, features=None)
 
         a = sample(image_A)
@@ -97,10 +117,11 @@ class Comparator:
         a.features = self.hwnet(a)
         b.features = self.hwnet(b)
         with torch.no_grad():
-            matrix = self.compute_cost_matrix(a.features, b.features)
-            matrix = 1 - matrix
+            matrix = self.compute_cosine_matrix(a.features, b.features)
+            # matrix = 1 - matrix
+            matrix = matrix.tolist()
+            matrix = make_cost_matrix(matrix)
 
-        matrix = matrix.tolist()
         m = Munkres()
         indexes = m.compute(matrix)
         # total = 0
@@ -114,7 +135,7 @@ class Comparator:
         plot(a, b, indexes)
             
 
-    def compute_cost_matrix(self, A, B):
+    def compute_cosine_matrix(self, A, B):
         similarity = CosineSimilarity()
         num_A, _ = A.size()
         num_B, _ = B.size()
