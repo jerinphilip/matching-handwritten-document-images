@@ -191,11 +191,14 @@ if __name__ == '__main__':
     hwnet_path = os.path.join('third-party/hwnet/pretrained', 'iam-morph0.t7')
     compare = Comparator(east_path, hwnet_path)
     images = []
-    for i in range(2):
-        image = cv2.imread("data/sample-page-{}.png".format(i))
+    for i in range(3):
+        # image = cv2.imread("data/sample-page-{}.png".format(i))
+        image = cv2.imread("data/test-data-{}.jpg".format(i))
+        print("data/test-data-{}.jpg".format(i))
+        # print(image)
         images.append(image)
         # cv2.imwrite("data/bbox-sample-page-{}.png".format(i), image)
 
-    compare(images[1], images[0])
+    compare(images[1], images[2])
 
 
