@@ -17,7 +17,7 @@ add_paths()
 from east import EASTWrapper
 from utils import HWNetInferenceEngine
 import torch
-from torch.nn.modules.distance import CosineSimilarity
+from torch.nn.modules.distance import CosineSimilarity, PairwiseDistance
 from munkres import Munkres, make_cost_matrix
 import matplotlib
 matplotlib.use('Agg')
@@ -84,6 +84,7 @@ def plot(a, b, indices):
         )
                           
         plt.text(ba.X, ba.y, index[0], fontsize=8, **kw)
+        # plt.text(offset_x + bb.x, offset_y + bb.y, index[0], fontsize=8, **kw)
         plt.text(offset_x + bb.x, offset_y + bb.y, index[0], fontsize=8, **kw)
 
     # indices = random.sample(indices, 25)
@@ -92,6 +93,9 @@ def plot(a, b, indices):
         # s, f = index
         # draw_arrows(a.bboxes[f], b.bboxes[s])
         draw_text_labels(index, a.bboxes[f], b.bboxes[s])
+    # l = min(len(a.bboxes), len(b.bboxes))
+    # for i in range(l):
+    #      draw_text_labels((i, i), a.bboxes[i], b.bboxes[i])
 
     plt.savefig('data/matching.png')
 
@@ -114,16 +118,29 @@ class Comparator:
 
         a = sample(image_A)
         b = sample(image_B)
+
+        def f(tag, img, bboxes):
+            for i, bbox in enumerate(bboxes):
+                fpath = 'data/intermediates/{}-{}.png'.format(tag, i)
+                cropped = img[bbox.y:bbox.Y, bbox.x:bbox.X, :]
+                # print(fpath)
+                cv2.imwrite(fpath, cropped)
+
+        f("a", a.image, a.bboxes)
+        f("b", b.image, b.bboxes)
+
         a.features = self.hwnet(a)
         b.features = self.hwnet(b)
         with torch.no_grad():
             matrix = self.compute_cosine_matrix(a.features, b.features)
             # matrix = 1 - matrix
-            matrix = matrix.tolist()
-            matrix = make_cost_matrix(matrix)
+            # matrix = matrix.tolist()
+            # matrix = make_cost_matrix(matrix)
 
-        m = Munkres()
-        indexes = m.compute(matrix)
+
+        # m = Munkres()
+        # indexes = m.compute(matrix)
+        indexes = self.debug_nn(matrix)
         # total = 0
         # for row, column in indexes:
         #     value = matrix[row][column]
@@ -133,10 +150,27 @@ class Comparator:
         # # print(f'total cost: {total}')
         # print('total cost', total)
         plot(a, b, indexes)
+
+
+    def debug_nn(self, matrix):
+        nA, nB = matrix.shape
+        best = []
+        for i in range(nA):
+            js = np.argsort(matrix[i, :])
+            #  print(matrix[i, js])
+            best.append((i, js[0]))
+        # print(len(best))
+        xs, ys = list(zip(*best))
+        # print(set(xs))
+        # print(set(ys))
+        return best
+
             
 
     def compute_cosine_matrix(self, A, B):
         similarity = CosineSimilarity()
+        similarity = PairwiseDistance()
+        print(A.size(), B.size())
         num_A, _ = A.size()
         num_B, _ = B.size()
         _matrix = np.zeros((num_A, num_B))
@@ -147,6 +181,7 @@ class Comparator:
                 vB = B[j, :].unsqueeze(0)
                 vB = vB.cuda()
                 value = similarity(vA, vB)
+                # print(value)
                 _matrix[i, j] = value.item()
         return _matrix
 
@@ -161,6 +196,6 @@ if __name__ == '__main__':
         images.append(image)
         # cv2.imwrite("data/bbox-sample-page-{}.png".format(i), image)
 
-    compare(images[0], images[1])
+    compare(images[1], images[0])
 
 
